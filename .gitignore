@@ -1,17 +1,14 @@
-﻿# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Ambientes virtuais
 .venv/
 venv/
 env/
 ENV/
 
-# Variáveis de ambiente e credenciais
 .env
 .env.*
 !.env.example
@@ -21,25 +18,21 @@ secrets/
 credentials/
 service-account*.json
 
-# IDE e sistema
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Logs
 logs/
 *.log
 *.jsonl
 
-# Bancos de dados locais
 *.duckdb
 *.db
 *.sqlite
 *.sqlite3
 
-# Dados locais
 data/raw/*
 !data/raw/.gitkeep
 data/curated/*
