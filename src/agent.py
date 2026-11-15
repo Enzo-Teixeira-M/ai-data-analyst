@@ -1,21 +1,3 @@
-"""
-IA Analista de Dados — pipeline de análise em etapas.
-
-Em vez de deixar um modelo pequeno decidir sozinho quando consultar, parar e
-reportar, o Python conduz o processo e usa o modelo onde ele é mais útil:
-
-  1. PERFIL      Python calcula o perfil real da tabela (nulos, zeros, distribuições).
-  2. PLANO       Modelo interpreta a pergunta e planeja 3-5 consultas complementares.
-  3. EXECUÇÃO    Consultas validadas (somente SELECT), com auto-correção de SQL.
-  4. EVIDÊNCIAS  Python calcula fatos estatísticos (concentração, outliers,
-                 correlações, média vs mediana) sobre cada resultado.
-  5. APROFUNDA   Modelo critica a evidência e pede consultas complementares.
-  6. SÍNTESE     Modelo escreve a análise (JSON estruturado); gráficos, tabelas e
-                 KPIs são montados pelo Python a partir dos dados reais.
-  7. VALIDAÇÃO   Números citados nos textos são conferidos contra os resultados.
-  8. RELATÓRIO   generate_report + resposta de chat que complementa o dashboard.
-"""
-
 import itertools
 import json
 import math
@@ -37,29 +19,24 @@ from src.tools.get_schema import get_schema
 from src.tools.run_query import run_query
 from src.tools.generate_report import generate_report
 
-# --------------------------------------------------------------------------
-# Configuração
-# --------------------------------------------------------------------------
 MODELO = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "16384"))  # o padrão do Ollama (2048-4096) trunca o esquema
+NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "16384"))
 
 TABLE_NAME = "vendas"
 ALLOWED_TABLES = {TABLE_NAME}
 
-MAX_SQL_ATTEMPTS = 14         # execuções totais (inclui tentativas de correção)
-MAX_SQL_REPAIRS = 2           # correções por consulta
+MAX_SQL_ATTEMPTS = 14
+MAX_SQL_REPAIRS = 2
 MAX_PLAN_QUERIES = 5
 MAX_DEEPENING_ROUNDS = 2
 MAX_FOLLOWUPS_PER_ROUND = 2
-DEFAULT_LIMIT = 50            # LIMIT acrescentado quando o modelo esquece
+DEFAULT_LIMIT = 50
 MAX_LIMIT = 500
-DIGEST_CHARS = 9000           # tamanho máximo do resumo de evidências enviado ao modelo
+DIGEST_CHARS = 9000
 HISTORY_MESSAGES = 8
 HISTORY_CHARS = 1200
 PROFILE_TTL_SECONDS = 600
 
-# Tipos de gráfico que o seu generate_report sabe desenhar. O fallback original
-# só usava "bar"; acrescente "line", "pie" etc. aqui se o seu gerador suportar.
 SUPPORTED_CHART_TYPES = ("bar",)
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -67,9 +44,6 @@ LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / "agent.jsonl"
 
-# --------------------------------------------------------------------------
-# Prompts
-# --------------------------------------------------------------------------
 PERSONA = """
 Você é um analista de dados e cientista de dados sênior, com forte senso de negócio. Responda sempre em português do Brasil, em linguagem clara para quem toma decisões.
 
@@ -120,9 +94,6 @@ Escreva o relatório final em JSON, seguindo o esquema.
 - Use somente números presentes nas evidências, escritos exatamente como lá. Não calcule valores novos. Não use HTML nem markdown.
 """
 
-# --------------------------------------------------------------------------
-# Esquemas JSON (saída estruturada do Ollama)
-# --------------------------------------------------------------------------
 _STR = {"type": "string"}
 _STR_LIST = {"type": "array", "items": _STR}
 _QUERY_ITEM = {
@@ -182,9 +153,6 @@ REPORT_SCHEMA = {
                  "recomendacoes", "limitacoes", "proximos_passos"],
 }
 
-# --------------------------------------------------------------------------
-# Utilidades
-# --------------------------------------------------------------------------
 def write_log(event, details):
     entry = {"timestamp": datetime.now().isoformat(), "event": event, **details}
     with open(LOG_FILE, "a", encoding="utf-8") as f:
@@ -192,7 +160,6 @@ def write_log(event, details):
 
 
 def emit(state, message):
-    """Mostra o andamento no console e, se houver, para a interface (on_progress)."""
     print(f"[AGENTE] {message}")
     write_log("progress", {"message": message})
     callback = state.get("on_progress")
@@ -204,7 +171,6 @@ def emit(state, message):
 
 
 def num(v):
-    """float se v for número real (int, float, Decimal, numpy); senão None."""
     if v is None or isinstance(v, bool):
         return None
     if isinstance(v, (numbers.Real, Decimal)):
@@ -217,7 +183,6 @@ def num(v):
 
 
 def fmt(v, dec=2):
-    """Formata no padrão brasileiro: 1.234,56."""
     f = num(v)
     if f is None:
         return "—" if v is None else str(v)
@@ -241,7 +206,6 @@ def short(text, n=50):
 
 
 def qi(name):
-    """Identificador SQL entre aspas."""
     return '"' + str(name).replace('"', '""') + '"'
 
 
@@ -283,11 +247,7 @@ def summarize_result_for_log(result):
     return {"success": True, "columns": result.get("columns"), "row_count": len(rows), "sample": rows[:3]}
 
 
-# --------------------------------------------------------------------------
-# Chamadas ao modelo
-# --------------------------------------------------------------------------
 def chat_json(messages, schema, temperature=0.2, required=(), retries=1, label="llm"):
-    """Chama o Ollama com saída estruturada (JSON Schema) e devolve dict ou None."""
     msgs = list(messages)
     for attempt in range(retries + 1):
         started = time.perf_counter()
@@ -314,9 +274,6 @@ def chat_json(messages, schema, temperature=0.2, required=(), retries=1, label="
     return None
 
 
-# --------------------------------------------------------------------------
-# Perfil dos dados (calculado pelo Python, sem depender do modelo)
-# --------------------------------------------------------------------------
 _PROFILE_CACHE = {"ts": 0.0, "text": "", "total_rows": None}
 _NUMERIC_PREFIXES = ("TINYINT", "SMALLINT", "INTEGER", "BIGINT", "HUGEINT", "UTINYINT", "USMALLINT",
                      "UINTEGER", "UBIGINT", "FLOAT", "DOUBLE", "REAL", "DECIMAL")
@@ -349,7 +306,6 @@ def build_profile():
                         "numeric": ctype.startswith(_NUMERIC_PREFIXES)})
         total = total or num(r.get("count"))
 
-    # % de zeros nas colunas numéricas (em muitos catálogos, 0 significa "sem dado")
     zero_pct = {}
     numeric_cols = [c["name"] for c in columns if c["numeric"]][:8]
     if numeric_cols:
@@ -387,9 +343,6 @@ def build_profile():
     return cache
 
 
-# --------------------------------------------------------------------------
-# Execução segura de SQL
-# --------------------------------------------------------------------------
 def execute_query(sql, state, objetivo=""):
     if state["sql_attempts"] >= MAX_SQL_ATTEMPTS:
         return {"success": False, "error": f"Limite de {MAX_SQL_ATTEMPTS} consultas atingido."}
@@ -405,7 +358,6 @@ def execute_query(sql, state, objetivo=""):
         return {"success": False, "error": "Somente uma instrução SELECT é permitida por chamada."}
     stmt = stmts[0]
 
-    # Defesa adicional: só tabelas permitidas (bloqueia read_csv(), arquivos, information_schema...)
     ctes = {(c.alias or "").lower() for c in stmt.find_all(exp.CTE)}
     for table in stmt.find_all(exp.Table):
         name = (table.name or "").lower()
@@ -438,7 +390,7 @@ def execute_query(sql, state, objetivo=""):
         err = result.get("error") if isinstance(result, dict) else str(result)
         return {"success": False, "error": str(err or "erro desconhecido")}
     result = dict(result)
-    result["sql"] = sql  # SQL efetivamente executado (pode ter ganho um LIMIT)
+    result["sql"] = sql
     return result
 
 
@@ -455,7 +407,6 @@ def repair_sql(sql, error, system):
 
 
 def run_with_repair(item, state, system):
-    """Executa uma consulta do plano; se falhar, pede ao modelo uma correção (até MAX_SQL_REPAIRS)."""
     sql, objetivo = item["sql"], item.get("objetivo") or "Consulta de apoio"
     key = normalize_sql(sql)
     if key in state["seen_sql"]:
@@ -480,9 +431,6 @@ def run_with_repair(item, state, system):
     return None
 
 
-# --------------------------------------------------------------------------
-# Evidências: estatística calculada pelo Python sobre cada resultado
-# --------------------------------------------------------------------------
 _NON_ADDITIVE = re.compile(r"(avg|media|média|mean|median|mediana|pct|perc|taxa|ratio|razao|razão|"
                            r"desvio|std|corr|min|max|nota|stars|preco|preço|price)", re.I)
 _ADDITIVE = re.compile(r"(total|soma|sum|qtd|quantidade|count|contagem|^n$|^n_|_n$|num_|produtos|"
@@ -532,7 +480,6 @@ def infer_types(cols, rows):
 
 
 def build_facts(ev):
-    """Fatos objetivos (em português) calculados sobre as linhas retornadas."""
     qid, cols, rows, types = ev["id"], ev["columns"], ev["rows"], ev["types"]
     n = len(rows)
     if n == 0:
@@ -633,7 +580,6 @@ def render_rows(ev, max_rows):
 
 
 def evidence_digest(evidences, max_chars=DIGEST_CHARS):
-    """Resumo compacto das evidências; reduz as amostras até caber no orçamento de contexto."""
     text = ""
     for sample in (12, 8, 5, 3):
         blocks = []
@@ -648,9 +594,6 @@ def evidence_digest(evidences, max_chars=DIGEST_CHARS):
     return text[:max_chars]
 
 
-# --------------------------------------------------------------------------
-# Aprofundamento: o modelo critica a evidência e pede consultas complementares
-# --------------------------------------------------------------------------
 def deepen(question, plan, state, system, history_msgs):
     for round_no in range(1, MAX_DEEPENING_ROUNDS + 1):
         if state["sql_attempts"] >= MAX_SQL_ATTEMPTS - 1:
@@ -682,15 +625,11 @@ def deepen(question, plan, state, system, history_msgs):
             break
 
 
-# --------------------------------------------------------------------------
-# Verificação dos números citados (anti-alucinação)
-# --------------------------------------------------------------------------
 _NUM_RE = re.compile(r"\d+(?:[.,]\d+)*")
 _ID_RE = re.compile(r"\bC\d+\b")
 
 
 def number_candidates(tok):
-    """Interpretações possíveis de um token numérico (pt-BR e en-US)."""
     if tok.isdigit():
         return {float(tok)}
     out = set()
@@ -710,7 +649,6 @@ def numbers_in(text):
 
 
 class KnownNumbers:
-    """Conjunto de números presentes nas evidências; aceita arredondamentos e 0,2% de tolerância."""
 
     def __init__(self, values):
         self.values = sorted(values)
@@ -766,9 +704,6 @@ def find_unverified(struct, known):
     return found
 
 
-# --------------------------------------------------------------------------
-# Síntese
-# --------------------------------------------------------------------------
 _CONF = {"alta": "alta", "media": "média", "média": "média", "baixa": "baixa"}
 
 
@@ -842,9 +777,6 @@ def synthesize(question, plan, state, system, history_msgs, known):
     return struct, bad
 
 
-# --------------------------------------------------------------------------
-# Montagem do relatório (gráficos, tabelas e KPIs vêm dos dados, nunca do modelo)
-# --------------------------------------------------------------------------
 def build_chart(ev, x_col, y_col, title, tipo="bar", max_points=25):
     if x_col not in ev["columns"] or y_col not in ev["columns"]:
         return None
@@ -956,7 +888,6 @@ def assemble_report(struct, state, unverified):
 
 
 def build_fallback_struct(question, state):
-    """Relatório automático (sem interpretação do modelo), baseado nos fatos calculados pelo Python."""
     insights = []
     for ev in state["evidences"]:
         facts = ev["facts"][:3]
@@ -975,7 +906,6 @@ def build_fallback_struct(question, state):
 
 
 def compose_answer(struct, report_path):
-    """Resposta de chat que complementa o dashboard com a narrativa da análise."""
     lines = [struct["resumo"]]
     if struct["insights"]:
         lines.append("\nPRINCIPAIS ACHADOS")
@@ -1000,9 +930,6 @@ def compose_answer(struct, report_path):
     return "\n".join(lines)
 
 
-# --------------------------------------------------------------------------
-# Orquestração
-# --------------------------------------------------------------------------
 def create_agent_state(schema, on_progress=None):
     return {"schema": schema, "sql_attempts": 0, "query_succeeded": False, "report_generated": False,
             "report_path": None, "evidences": [], "seen_sql": set(), "profile": {},

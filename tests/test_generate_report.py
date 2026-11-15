@@ -5,7 +5,6 @@ from src.tools import generate_report as module
 
 def test_generate_report(tmp_path, monkeypatch):
 
-    # Criar diretórios temporários
     template_dir = tmp_path / "templates"
     static_dir = tmp_path / "static"
     report_dir = tmp_path / "reports"
@@ -13,14 +12,12 @@ def test_generate_report(tmp_path, monkeypatch):
     template_dir.mkdir()
     static_dir.mkdir()
 
-    # Criar um arquivo Chart.js fictício para o teste
     chart_file = static_dir / "chart.umd.min.js"
     chart_file.write_text(
         "CHART_JS_TEST",
         encoding="utf-8"
     )
 
-    # Criar template HTML de teste
     template = """
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -66,12 +63,10 @@ def test_generate_report(tmp_path, monkeypatch):
         encoding="utf-8"
     )
 
-    # Substituir os diretórios reais pelos temporários
     monkeypatch.setattr(module, "TEMPLATE_DIR", template_dir)
     monkeypatch.setattr(module, "STATIC_DIR", static_dir)
     monkeypatch.setattr(module, "REPORT_DIR", report_dir)
 
-    # Dados seguindo o formato atual do agente
     report_data = {
         "titulo": "Relatório de teste",
         "resumo": "Este é um teste de geração de relatório HTML.",
@@ -104,20 +99,16 @@ def test_generate_report(tmp_path, monkeypatch):
         "limitacoes": []
     }
 
-    # Executar geração
     result = module.generate_report(report_data)
 
-    # Verificar sucesso
     assert result["success"] is True, result.get("error")
 
-    # Verificar retorno
     assert "filename" in result
     assert "path" in result
     assert "sql_steps" in result
 
     assert result["filename"].endswith(".html")
 
-    # Verificar arquivo gerado
     report_file = Path(result["path"])
 
     assert report_file.exists()
@@ -125,7 +116,6 @@ def test_generate_report(tmp_path, monkeypatch):
 
     assert report_file == report_dir / result["filename"]
 
-    # Verificar conteúdo HTML
     html = report_file.read_text(encoding="utf-8")
 
     assert "Relatório de teste" in html
@@ -134,5 +124,4 @@ def test_generate_report(tmp_path, monkeypatch):
     assert "SELECT" in html
     assert "CHART_JS_TEST" in html
 
-    # Verificar explicação SQL
     assert result["sql_steps"] > 0

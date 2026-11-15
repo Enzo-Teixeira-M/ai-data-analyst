@@ -16,16 +16,13 @@ st.set_page_config(
 st.title("IA Analista de Dados")
 st.caption("Faça perguntas sobre seus dados e receba análises automatizadas.")
 
-# Histórico da conversa
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Exibe as mensagens anteriores
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-        # Mostra o relatório associado à resposta
         report_path = message.get("report_path")
 
         if report_path and Path(report_path).exists():
@@ -46,11 +43,9 @@ for message in st.session_state.messages:
             )
 
 
-# Campo de pergunta
 pergunta = st.chat_input("Ex.: Quais são as categorias mais populares?")
 
 if pergunta:
-    # Exibe e registra a pergunta
     st.session_state.messages.append({
         "role": "user",
         "content": pergunta
@@ -59,7 +54,6 @@ if pergunta:
     with st.chat_message("user"):
         st.markdown(pergunta)
 
-    # Recupera o histórico anterior para o agente
     historico = [
         {"role": msg["role"], "content": msg["content"]}
         for msg in st.session_state.messages[:-1]
@@ -69,8 +63,6 @@ if pergunta:
     with st.chat_message("assistant"):
         with st.spinner("Analisando os dados..."):
             try:
-                # O agente deve retornar um dicionário:
-                # {"answer": "...", "report_path": "..."}
                 resultado = run_agent(
                     pergunta,
                     historico=historico

@@ -7,20 +7,12 @@ from sqlglot import exp
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
-# ============================================================
-# CONFIGURAÇÕES DE DIRETÓRIOS
-# ============================================================
-
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 TEMPLATE_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
 REPORT_DIR = BASE_DIR / "reports"
 
-
-# ============================================================
-# VALIDAÇÃO DOS DADOS DO RELATÓRIO
-# ============================================================
 
 def validate_report(data):
 
@@ -44,12 +36,10 @@ def validate_report(data):
     for key, value in defaults.items():
         data.setdefault(key, value)
 
-    # Validar campos textuais
     for key in ("titulo", "resumo", "sql"):
         if not isinstance(data[key], str):
             raise ValueError(f"{key} precisa ser texto.")
 
-    # Validar listas
     for key in (
         "kpis",
         "graficos",
@@ -60,7 +50,6 @@ def validate_report(data):
         if not isinstance(data[key], list):
             raise ValueError(f"{key} precisa ser uma lista.")
 
-    # Validar KPIs
     for kpi in data["kpis"]:
 
         if not isinstance(kpi, dict):
@@ -72,7 +61,6 @@ def validate_report(data):
         if not isinstance(kpi.get("valor"), (str, int, float)):
             raise ValueError("Valor de KPI inválido.")
 
-    # Validar gráficos
     for chart in data["graficos"]:
 
         if not isinstance(chart, dict):
@@ -105,7 +93,6 @@ def validate_report(data):
                 "Os valores do eixo y precisam ser numéricos."
             )
 
-    # Validar tabelas
     for table in data["tabelas"]:
 
         if not isinstance(table, dict):
@@ -133,7 +120,6 @@ def validate_report(data):
                     "Cada linha deve corresponder às colunas."
                 )
 
-    # Validar insights e limitações
     if not all(
         isinstance(value, str)
         for value in data["insights"] + data["limitacoes"]
@@ -145,17 +131,9 @@ def validate_report(data):
     return data
 
 
-# ============================================================
-# FORMATAÇÃO DO SQL
-# ============================================================
-
 def _sql_text(node):
     return node.sql(dialect="duckdb") if node is not None else ""
 
-
-# ============================================================
-# EXPLICAÇÃO DAS CLÁUSULAS SQL
-# ============================================================
 
 def explain_sql(sql):
 
@@ -209,7 +187,6 @@ def explain_sql(sql):
 
         steps = []
 
-        # SELECT
         if select.expressions:
 
             selected_fields = ", ".join(
@@ -224,7 +201,6 @@ def explain_sql(sql):
                 )
             })
 
-        # Demais cláusulas
         clauses = [
             (
                 "from_",
@@ -292,7 +268,6 @@ def explain_sql(sql):
                 "description": description + str(value) + "."
             })
 
-        # JOIN
         for join in select.args.get("joins") or []:
 
             steps.append({
@@ -330,18 +305,12 @@ def explain_sql(sql):
         ]
 
 
-# ============================================================
-# GERAÇÃO DO RELATÓRIO HTML
-# ============================================================
-
 def generate_report(report_data):
 
     try:
 
-        # 1. Validar os dados recebidos pelo agente
         data = validate_report(report_data)
 
-        # 2. Configurar o ambiente Jinja2
         env = Environment(
             loader=FileSystemLoader(TEMPLATE_DIR),
             autoescape=select_autoescape(["html", "xml"])
@@ -349,7 +318,6 @@ def generate_report(report_data):
 
         template = env.get_template("report.html")
 
-        # 3. Verificar Chart.js
         chart_path = STATIC_DIR / "chart.umd.min.js"
 
         if not chart_path.exists():
@@ -362,10 +330,8 @@ def generate_report(report_data):
             encoding="utf-8"
         )
 
-        # 4. Interpretar e formatar SQL
         sql_formatted, sql_steps = explain_sql(data["sql"])
 
-        # 5. Criar identificação única para o relatório
         now = datetime.now()
 
         filename = (
@@ -374,7 +340,6 @@ def generate_report(report_data):
             + ".html"
         )
 
-        # 6. Renderizar o template HTML
         html = template.render(
             data=data,
             generated_at=now.strftime("%d/%m/%Y %H:%M:%S"),
@@ -383,7 +348,6 @@ def generate_report(report_data):
             sql_steps=sql_steps
         )
 
-        # 7. Garantir que a pasta de relatórios exista
         REPORT_DIR.mkdir(
             parents=True,
             exist_ok=True

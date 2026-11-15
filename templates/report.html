@@ -97,7 +97,6 @@ pre.sql{margin:0;background:#171a40;color:#dfe2ff;padding:16px;border-radius:0 0
 </style>{% endraw %}
 </head>
 <body>
-{# ====== Variáveis derivadas (compatíveis com o JSON atual) ====== #}
 {% set kpis = data.kpis or [] %}
 {% set graficos = data.graficos or [] %}
 {% set insights = data.insights or [] %}
@@ -321,7 +320,6 @@ GRAFICOS.forEach((g,i)=>{
       scales}});
 });
 
-/* Realce de sintaxe SQL */
 const KW='SELECT|DISTINCT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|OFFSET|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|AS|AND|OR|NOT|IN|IS|NULL|LIKE|ILIKE|BETWEEN|CASE|WHEN|THEN|ELSE|END|UNION|ALL|WITH|OVER|PARTITION BY|ASC|DESC|CAST|INTERVAL|EXISTS|USING|FILTER|QUALIFY';
 const RX=new RegExp("(--[^\\n]*)|('(?:[^']|'')*')|\\b(\\d+(?:\\.\\d+)?)\\b|\\b("+KW+")\\b|\\b([A-Za-z_][A-Za-z_0-9]*)(?=\\()","gi");
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -332,7 +330,6 @@ function copySql(b){const code=b.closest('.qbody').querySelector('code');
   navigator.clipboard&&navigator.clipboard.writeText(code.dataset.raw||code.textContent).then(()=>{b.textContent='Copiado';setTimeout(()=>b.textContent='Copiar',1500)})}
 function toggleAll(open){document.querySelectorAll('details.q').forEach(d=>d.open=open)}
 
-/* Tabelas: filtro, ordenação e paginação */
 function num(s){s=String(s).trim();if(!/\d/.test(s)||/[A-Za-z]{2,}/.test(s.replace(/R\$/g,'')))return NaN;
   let c=s.replace(/[^\d,.\-]/g,'');if(c.includes(','))c=c.replace(/\./g,'').replace(',','.');return Number(c)}
 document.querySelectorAll('.dtable').forEach(p=>{
@@ -356,7 +353,6 @@ document.querySelectorAll('.dtable').forEach(p=>{
     th.onclick=go;th.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
   draw()});
 
-/* Navegação ativa */
 const links=[...document.querySelectorAll('#nav a')],map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map.get(e.target.id);a&&a.classList.add('active')}}),{rootMargin:'-20% 0px -70% 0px'});
 map.forEach((a,id)=>{const el=document.getElementById(id);el&&io.observe(el)});
