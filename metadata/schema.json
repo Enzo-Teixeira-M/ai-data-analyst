@@ -1,0 +1,54 @@
+
+{
+  "tables": {
+    "vendas": {
+      "description": "Dataset contendo informações sobre produtos comercializados na Amazon, incluindo preços, avaliações, quantidade de reviews, categorias e indicadores comerciais.",
+      "columns": {
+        "asin": {
+          "type": "STRING",
+          "description": "Identificador ASIN (Amazon Standard Identification Number) único do produto na Amazon."
+        },
+        "product_id": {
+          "type": "STRING",
+          "description": "Identificador do produto no dataset de origem."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "Nome ou título comercial do produto."
+        },
+        "imgurl": {
+          "type": "STRING",
+          "description": "URL da imagem representativa do produto."
+        },
+        "producturl": {
+          "type": "STRING",
+          "description": "URL da página do produto na Amazon."
+        },
+        "stars": {
+          "type": "FLOAT",
+          "description": "Nota média de avaliação do produto. Quando não há avaliação disponível, o valor é 0."
+        },
+        "reviews": {
+          "type": "INTEGER",
+          "description": "Quantidade de avaliações ou reviews registrados para o produto. Quando indisponível, o valor é 0."
+        },
+        "price": {
+          "type": "FLOAT",
+          "description": "Preço atual do produto em dólares canadenses (CAD). Quando indisponível, o valor é 0."
+        },
+        "listprice": {
+          "type": "FLOAT",
+          "description": "Preço original do produto antes de descontos, em CAD. Quando indisponível, o valor é 0."
+        },
+        "categoryname": {
+          "type": "STRING",
+          "description": "Nome da categoria à qual o produto pertence."
+        },
+        "isbestseller": {
+          "type": "BOOLEAN",
+          "description": "Indica se o produto está identificado como Best Seller na Amazon."
+        }
+      }
+    }
+  }
+}
