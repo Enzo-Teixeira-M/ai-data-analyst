@@ -127,10 +127,10 @@ Local datasets, generated reports, virtual environments, caches, logs, and local
 Replace the placeholder with the URL of your GitHub repository:
 
 ```powershell
-git clone <YOUR_REPOSITORY_URL>
-cd AI-Data-Analyst
+git clone https://github.com/Enzo-Teixeira-M/ai-data-analyst.git
+cd ai-data-analyst
 ```
-
+"
 ### 2. Create and activate a virtual environment
 
 On Windows PowerShell:
