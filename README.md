@@ -214,9 +214,3 @@ Successful report generation writes an HTML file to the local `reports/` directo
 - The LLM can generate an incorrect interpretation or SQL query. Query validation and result-grounded responses reduce risk but do not guarantee that every analysis is correct.
 - Historical trend analysis requires historical data snapshots. A single recent-month indicator is not a time series.
 - The project is intended as a local analytics and portfolio project. Review performance, access controls, data governance, and security before adapting it for production use.
-
-## Licensing and Data Attribution
-
-A license for this project's own source code has not yet been selected. Until a license is added, do not assume that the code is available for unrestricted reuse.
-
-Before publishing the repository, verify the source, terms, and redistribution rights for the dataset. Chart.js is distributed under the MIT License; include its license notice when redistributing the bundled Chart.js file. The license for the bundled Chart.js 4.4.7 release is available [here](https://github.com/chartjs/Chart.js/blob/v4.4.7/LICENSE.md).
