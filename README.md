@@ -2,6 +2,12 @@
 
 A local AI-powered data analysis application that lets users ask questions about a dataset in natural language. The application uses a locally running language model to help interpret questions, inspect the available schema, generate SQL, analyze query results, and produce an HTML report with visualizations and written insights.
 
+
+
+https://github.com/user-attachments/assets/d0f83507-fb29-4ed4-9dae-be23ec070931
+
+
+
 ## Project Overview
 
 The goal of this project is to connect natural-language interaction with a reproducible analytical workflow:
